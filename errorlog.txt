@@ -1,0 +1,5 @@
+2024-04-19T15:23:50 [ERROR] | [main] | MainClass.main(Logging.java:20) | Critical error occurred: database connection failed
+2024-04-19T15:23:51 [ERROR] | [Thread-1] | WorkerThread.run(WorkerThread.java:50) | Exception caught: IOException
+2024-04-19T15:23:52 [ERROR] | [pool-1-thread-1] | TaskExecutor.execute(TaskExecutor.java:80) | Error executing task: TimeoutException
+2024-04-19T15:23:53 [ERROR] | [AWT-EventQueue-0] | GUIController.handleEvent(GUIController.java:120) | GUI error: NullPointerError
+2024-04-19T15:23:54 [ERROR] | [Timer-0] | TimerTask.run(TimerTask.java:30) | Timeout expired: task not completed
