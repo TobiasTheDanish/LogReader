@@ -1,66 +1,48 @@
 package dk.skancode;
 
-import dk.skancode.event.EventType;
-import dk.skancode.event.FileEvent;
-import dk.skancode.event.IEventListener;
+import dk.skancode.controller.AuthController;
+import dk.skancode.controller.WebSocketController;
+import dk.skancode.watcher.FileListenerFactory;
 import dk.skancode.watcher.FileWatcher;
-import dk.skancode.watcher.IFileWatcher;
+import io.javalin.Javalin;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class Main {
     public static void main(String[] args) {
-//        var app = Javalin.create().get("/", (ctx) -> ctx.result("Hello world"));
-//
-//        app.start(7070);
-        try {
-            String testPath = args[0];
-            FileWatcher watcher = FileWatcher.getInstance();
-            watcher.addListener(new EventListener(testPath));
+        var app = Javalin.create();
+        app.get("/", (ctx) -> ctx.result("Hello world"));
+        app.ws("/ws", (wsConfig -> {
+            WebSocketController controller = WebSocketController.getInstance();
+            wsConfig.onConnect(controller::handleConnect);
+            wsConfig.onMessage(controller::handleMessage);
+            wsConfig.onClose(controller::handleClose);
+        }));
 
-            watcher.register(testPath);
-            while (true) {
-                watcher.watch();
-            }
-        } catch (IOException | InterruptedException e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
-        }
+        AuthController authController = new AuthController();
+        app.post("/auth", authController::handleAuthRequest);
 
+        app.start(7070);
 //        try {
-//            FileTree tree = new FileTree(Paths.get("./testDir"));
-//            System.out.println(tree);
-//            System.out.println(tree.getReaderMap());
+//            String testPath = args[0];
+//            FileWatcher watcher = FileWatcher.getInstance();
+//            watcher.addListener(FileListenerFactory.getListener(testPath));
+//
+//            watcher.register(testPath);
+//            Thread t = new Thread(() -> {
+//                while (true) {
+//                    try {
+//                        watcher.watch();
+//                    } catch (InterruptedException | IOException e) {
+//                        System.err.println("Exception thrown on watcher thread: " + e.getMessage());
+//                        break;
+//                    }
+//                }
+//            });
+//            t.start();
 //        } catch (IOException e) {
 //            System.out.println(e.getMessage());
 //            e.printStackTrace();
 //        }
-    }
-
-    private static class EventListener implements IEventListener<FileEvent> {
-        private final FileTree tree;
-        public EventListener(String path) throws IOException {
-            tree = new FileTree(Paths.get(path));
-        }
-        @Override
-        public void onNotify(FileEvent event) {
-            if (event.getType() == EventType.CREATE) {
-                if(!tree.addNode(event.getPath())) {
-                    System.err.println("Could not add node to tree!");
-                    System.exit(1);
-                }
-            } else if (event.getType() == EventType.DELETE) {
-                if (!tree.removeNode(event.getPath())) {
-                    System.err.println("Could not remove node to tree!");
-                    System.exit(1);
-                }
-            }
-
-//            System.out.println(tree);
-        }
     }
 }

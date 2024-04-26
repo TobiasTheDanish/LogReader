@@ -1,4 +1,4 @@
-package dk.skancode;
+package dk.skancode.tree;
 
 import dk.skancode.reader.IReader;
 import dk.skancode.reader.Log;
@@ -8,18 +8,20 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class FileTree {
+public class FileTree implements ITree<FileTree.Node, Path> {
     private final Node root;
-    private final Map<String, IReader<Log>> logReaderMap = new HashMap<>();
 
     public FileTree(Path path) throws IOException {
         this.root = new Node(path.toString(), path);
         generateTree(this.root, path);
+    }
+
+    public Map<String, List<Log>> getLogMap() {
+        return root.getLogMap();
     }
 
     private void generateTree(Node root, Path rootPath) throws IOException {
@@ -28,7 +30,6 @@ public class FileTree {
         try (Stream<Path> stream = Files.list(rootPath)) {
             List<Path> files = stream.filter(Files::isRegularFile).toList();
             for (Path file : files) {
-                logReaderMap.put(file.toString(), new LogReader(file.toString()));
                 System.out.println("Node '" + file + "' added to tree.");
                 root.addChild(new Node(file.toString(), file));
             }
@@ -46,6 +47,10 @@ public class FileTree {
         }
     }
 
+    public Optional<Node> getNode(Path path) {
+        return root.search(path.toString());
+    }
+
     public boolean addNode(Path path) {
         Path parent = path.getParent();
         Optional<Node> optParentNode = root.search(parent.toString());
@@ -57,21 +62,19 @@ public class FileTree {
 
         Node parentNode = optParentNode.get();
 
-        Node newChild = new Node(path.toString(), path);
         try {
-            if (Files.isRegularFile(path)) {
-                logReaderMap.put(path.toString(), new LogReader(path.toString()));
-            } else if (Files.isDirectory(path)) {
+            Node newChild = new Node(path.toString(), path);
+            if (Files.isDirectory(path)) {
                 generateTree(newChild, path);
             }
+            parentNode.addChild(newChild);
+            System.out.println("Node '" + path + "' added to tree.");
+
+            return true;
         } catch (IOException e) {
             System.err.println(e.getMessage());
             return false;
         }
-        parentNode.addChild(newChild);
-        System.out.println("Node '" + path + "' added to tree.");
-
-        return true;
     }
 
     public boolean removeNode(Path path) {
@@ -85,7 +88,6 @@ public class FileTree {
 
         Node nodeToRemove = optNode.get();
 
-        logReaderMap.remove(path.toString());
         Path parentPath = nodeToRemove.getRelativePath().getParent();
         Optional<Node> optParentNode = root.search(parentPath.toString());
         if (optParentNode.isEmpty()) {
@@ -101,6 +103,7 @@ public class FileTree {
         return true;
     }
 
+    @Override
     public String toString() {
         return root.toString(2);
     }
@@ -111,13 +114,24 @@ public class FileTree {
         private final boolean exists;
         private final boolean isDir;
         private List<Node> children;
+        private IReader<Log> reader;
 
-        public Node(String name, Path relativePath) {
+        public Node(String name, Path relativePath) throws FileNotFoundException {
             this.name = name;
             this.relativePath = relativePath;
             this.exists = Files.exists(relativePath);
             this.isDir = Files.isDirectory(relativePath);
             children = new ArrayList<>();
+            if (!this.isDir) {
+                reader = new LogReader(relativePath.toString());
+                if (reader.canRead()) {
+                    try {
+                        reader.readAll();
+                    } catch (Exception e) {
+                        throw new RuntimeException("Could not read from reader of path: '" + relativePath + "'. Error message: " + e);
+                    }
+                }
+            }
         }
 
         public Optional<Node> search(String name) {
@@ -137,6 +151,32 @@ public class FileTree {
             }
 
             return Optional.empty();
+        }
+
+        public Map<String, List<Log>> getLogMap() {
+            var map = new HashMap<String, List<Log>>();
+            if (!this.isDir) {
+                map.put(this.name, this.reader.getAll());
+                return map;
+            }
+
+            for (Node child : children) {
+                var childMap = child.getLogMap();
+
+                map.putAll(childMap);
+            }
+
+            return map;
+        }
+
+        public List<Log> readNewLogs() throws Exception {
+            int startListSize = reader.getAll().size();
+
+            while (reader.canRead()) {
+                reader.readLine();
+            }
+
+            return reader.getAll().stream().skip(startListSize).collect(Collectors.toList());
         }
 
         public void addChild(Node child) {
@@ -159,7 +199,7 @@ public class FileTree {
             return relativePath;
         }
 
-        public boolean isExists() {
+        public boolean exists() {
             return exists;
         }
 

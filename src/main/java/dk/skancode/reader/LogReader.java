@@ -12,17 +12,19 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Vector;
 
 public class LogReader implements IReader<Log> {
     private BufferedReader reader;
     private final List<Log> logs;
     public LogReader(String filePath) throws FileNotFoundException {
-        this.logs = new ArrayList<>();
+        this.logs = new Vector<>();
         this.reader = new BufferedReader(new FileReader(filePath));
     }
     @Override
     public IReader<Log> readLine() throws IOException {
         String line = reader.readLine();
+        if (line.isBlank()) return this;
 
         line = line.trim();
         String separator = "[|]";
@@ -42,6 +44,8 @@ public class LogReader implements IReader<Log> {
     @Override
     public IReader<Log> readAll() throws IOException {
         reader.lines().forEach((line) -> {
+            if (line.isBlank()) return;
+
             line = line.trim();
             String separator = "[|]";
             String[] sections = line.split(separator);

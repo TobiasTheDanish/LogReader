@@ -19,7 +19,6 @@ public class FileWatcher implements IFileWatcher, IEventPublisher<FileEvent> {
     public static FileWatcher instance = null;
     private final Queue<String> registerQueue = new ArrayDeque<>();
     private final Queue<String> deleteQueue = new ArrayDeque<>();
-    private boolean isWatching = false;
 
     private FileWatcher() {
         this.listeners = new ArrayList<>();
@@ -69,7 +68,6 @@ public class FileWatcher implements IFileWatcher, IEventPublisher<FileEvent> {
 
     @Override
     public void watch() throws InterruptedException, IOException {
-        isWatching = true;
         WatchKey key;
         for (Map.Entry<String, WatchService> entry : watchServiceMap.entrySet()) {
             while ((key = entry.getValue().poll()) != null) {
@@ -104,7 +102,6 @@ public class FileWatcher implements IFileWatcher, IEventPublisher<FileEvent> {
         }
         deleteQueue.clear();
         registerQueue.clear();
-        isWatching = false;
     }
 
     @Override

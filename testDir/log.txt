@@ -3,3 +3,4 @@
 2024-04-19T15:23:47 [WARN ] | [YetAnotherClass.someMethod] | Warning: resource not found
 2024-04-19T15:23:48 [DEBUG] | [DebugClass.debugMethod] | Debugging message: variable x = 10
 2024-04-19T15:23:49 [TRACE] | [TraceClass.traceMethod] | Entering method: processRequest
+2024-04-19T15:23:47 [WARN ] | [YetAnotherClass.someMethod] | Warning: resource not found
