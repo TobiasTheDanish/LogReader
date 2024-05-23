@@ -1,5 +1,8 @@
 package dk.skancode.controller;
 
+import dk.skancode.auth.Ticket;
+import dk.skancode.auth.TicketManager;
+import dk.skancode.dto.WSErrorMessage;
 import dk.skancode.dto.WebSocketMessage;
 import dk.skancode.reader.Log;
 import dk.skancode.watcher.FileListener;
@@ -9,6 +12,7 @@ import io.javalin.websocket.WsCloseContext;
 import io.javalin.websocket.WsConnectContext;
 import io.javalin.websocket.WsMessageContext;
 
+import java.net.SocketAddress;
 import java.util.*;
 import java.io.IOException;
 
@@ -18,6 +22,7 @@ public class WebSocketController {
     private static final FileWatcher watcher = FileWatcher.getInstance();
     private static WebSocketController instance = null;
     private static Thread watcherThread = null;
+    private TicketManager ticketManager = TicketManager.getInstance();
 
     private WebSocketController() {
         try {
@@ -60,6 +65,27 @@ public class WebSocketController {
 
     public void handleMessage(WsMessageContext ctx) {
         WebSocketMessage message = ctx.messageAsClass(WebSocketMessage.class);
+
+        if (message == null || message.ticket() == null) {
+            ctx.sendAsClass(new WSErrorMessage("Malformed message"), WSErrorMessage.class);
+            return;
+        }
+
+        Optional<Ticket> ticketOpt = ticketManager.getTicket(message.ticket());
+        if (ticketOpt.isEmpty()) {
+            System.out.println("Ticket not found");
+            ctx.sendAsClass(new WSErrorMessage("You are not authenticated"), WSErrorMessage.class);
+            return;
+        }
+
+        Ticket ticket = ticketOpt.get();
+        String ip = ctx.session.getRemoteAddress().toString();
+        ip = "[" + ip.split("\\[")[1].split("]")[0] + "]";
+
+        if (!ticket.userIp().equals(ip)) {
+            ctx.sendAsClass(new WSErrorMessage("You are not authenticated"), WSErrorMessage.class);
+            return;
+        }
 
         if (message.command().equalsIgnoreCase("fullPing")) {
             var logMap = listener.getLogMap();
