@@ -11,48 +11,44 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class FileListener implements IEventListener<FileEvent> {
-    private final Map<String, List<Log>> logMap;
     private final FileTree tree;
     private FileEvent lastEvent = null;
     protected FileListener(String path) throws IOException {
         tree = new FileTree(Paths.get(path));
-        logMap = tree.getLogMap();
     }
 
     public Map<String, List<Log>> getLogMap() {
-        return logMap;
+        return tree.getLogMap();
     }
 
     public List<Log> getLogsForFile(String name) {
-        return logMap.get(name);
+        return tree.getLogMap().get(name);
     }
     @Override
     public void onNotify(FileEvent event) {
         if (lastEvent != null && lastEvent.getType() == event.getType() && lastEvent.getPath().toString().equalsIgnoreCase(event.getPath().toString())) {
             System.out.println("Event '" + event.getType() + "' skipped for '" + event.getPath().toString() + "'.");
+            lastEvent = null;
             return;
         }
         lastEvent = event;
 
         System.out.println(event.getPath() + " was " + event.getType());
         if (event.getType() == EventType.CREATE) {
-            if(tree.addNode(event.getPath())) {
-                logMap.put(event.getPath().toString(), new ArrayList<>());
-            } else {
+            if(!tree.addNode(event.getPath())) {
                 System.err.println("Could not add node to tree!");
                 System.exit(1);
             }
         } else if (event.getType() == EventType.DELETE) {
-            if (tree.removeNode(event.getPath())) {
-                logMap.remove(event.getPath().toString());
-            } else {
-                System.err.println("Could not remove node to tree!");
+            if (!tree.removeNode(event.getPath())) {
+                System.err.println("Could not remove node from tree!");
                 System.exit(1);
             }
         } else if (event.getType() == EventType.MODIFY) {
             Optional<FileTree.Node> optNode = tree.getNode(event.getPath());
 
             if (optNode.isEmpty()) {
+                System.out.println("Path '" + event.getPath() + "' does not exist in tree");
                 return;
             }
 

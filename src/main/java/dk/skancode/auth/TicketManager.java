@@ -3,6 +3,7 @@ package dk.skancode.auth;
 import java.util.*;
 
 public class TicketManager {
+    private final long ticketExpiryTime = 86400000;
     private static TicketManager instance = null;
     private final Map<UUID, Ticket> tickets;
 
@@ -25,6 +26,14 @@ public class TicketManager {
     }
 
     public Optional<Ticket> getTicket(String uuid) {
-        return Optional.ofNullable(tickets.remove(UUID.fromString(uuid)));
+        Ticket t = tickets.get(UUID.fromString(uuid));
+        if (t == null) { return Optional.empty(); }
+
+        if (t.createdAt() + ticketExpiryTime <  System.currentTimeMillis()) {
+            tickets.remove(UUID.fromString(uuid));
+            return Optional.empty();
+        }
+
+        return Optional.of(t);
     }
 }

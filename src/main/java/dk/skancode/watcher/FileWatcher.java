@@ -44,7 +44,7 @@ public class FileWatcher implements IFileWatcher, IEventPublisher<FileEvent> {
 
         System.out.println("Path '" + dir + "' registered.");
 
-        try (Stream<Path> stream = Files.list(Paths.get(dirPath))){
+        try (Stream<Path> stream = Files.list(dir)){
             List<Path> paths = stream.filter(Files::isDirectory).toList();
             for (Path path : paths) {
                 this.register(path.toString());
@@ -84,7 +84,9 @@ public class FileWatcher implements IFileWatcher, IEventPublisher<FileEvent> {
                                 }
                             }
                             case DELETE -> {
-                                this.queueDeregistration(relativePath + "/");
+                                if (Files.isDirectory(relativePath)) {
+                                    this.queueDeregistration(relativePath + "/");
+                                }
                             }
                         }
 

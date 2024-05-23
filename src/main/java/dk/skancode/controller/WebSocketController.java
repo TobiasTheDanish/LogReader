@@ -22,7 +22,7 @@ public class WebSocketController {
     private static final FileWatcher watcher = FileWatcher.getInstance();
     private static WebSocketController instance = null;
     private static Thread watcherThread = null;
-    private TicketManager ticketManager = TicketManager.getInstance();
+    private final TicketManager ticketManager = TicketManager.getInstance();
 
     private WebSocketController() {
         try {
@@ -53,14 +53,11 @@ public class WebSocketController {
     }
 
     public void handleConnect(WsConnectContext ctx) {
-        System.out.println("Connected");
-        System.out.println(ctx.host());
         ctx.enableAutomaticPings();
     }
 
     public void handleClose(WsCloseContext ctx) {
         ctx.disableAutomaticPings();
-        System.out.println("Connection closed");
     }
 
     public void handleMessage(WsMessageContext ctx) {
